@@ -1,7 +1,6 @@
 // This tells TypeScript that a secret variable called INSTA_API_KEY will exist globally.
 declare const INSTA_API_KEY: string;
 
-// Define the structure of the environment variables (for other bindings if needed)
 export interface Env {}
 
 addEventListener('fetch', event => {
@@ -37,46 +36,60 @@ async function handleRequest(request: Request, env: Env, event: FetchEvent): Pro
       });
     }
 
-    // --- START OF UPDATED SECTION ---
-
-    // 1. Define the base URL for the ZylaLabs API
     const baseUrl = 'https://zylalabs.com/api/2006/instagram+media+downloader+api/6285/download+all+content';
-
-    // 2. Build the final URL by adding the Instagram URL as a query parameter
     const finalApiUrl = `${baseUrl}?url=${encodeURIComponent(instagramUrl)}`;
-
-    // 3. Read the secret API key
     const apiKey = INSTA_API_KEY; 
 
-    // 4. Call the external API using GET method
     const apiResponse = await fetch(finalApiUrl, {
-      method: 'GET', // <-- IMPORTANT: Changed to GET
+      method: 'GET',
       headers: {
-        // The API provider requires the Authorization header
         'Authorization': `Bearer ${apiKey}`,
       },
     });
 
-    // --- END OF UPDATED SECTION ---
-
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text();
-      console.error('API Provider Error:', errorText);
-      return new Response(JSON.stringify({ error: 'Failed to fetch data from provider' }), {
+      console.error('API Provider Error (Not OK):', errorText);
+      return new Response(JSON.stringify({ error: 'Failed to fetch data from provider', details: errorText }), {
         status: apiResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await apiResponse.json();
+    // --- START OF NEW ROBUST HANDLING ---
+    
+    // Get the response as raw text first
+    const responseText = await apiResponse.text();
+    let data;
 
+    try {
+      // Try to parse the text as JSON
+      data = JSON.parse(responseText);
+    } catch (jsonError) {
+      // If parsing fails, it means the response was not valid JSON.
+      // This is likely an error message from the provider.
+      console.error('API Provider sent non-JSON response:', responseText);
+      
+      // Return the actual response from the provider so we can see what's wrong
+      return new Response(JSON.stringify({ 
+        error: 'API provider returned an invalid response.', 
+        details: responseText 
+      }), {
+        status: 502, // 502 Bad Gateway is appropriate here
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // --- END OF NEW ROBUST HANDLING ---
+
+    // If we reach here, it means parsing was successful.
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error('Caught a top-level error:', e.message);
     return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
