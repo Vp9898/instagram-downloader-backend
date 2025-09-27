@@ -13,20 +13,19 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
     }
+    
+    const url = new URL(request.url);
+    if (url.pathname === '/image-proxy') {
+      const imageUrl = url.searchParams.get('url');
+      if (!imageUrl) return new Response('Missing image URL', { status: 400 });
+      return await fetch(imageUrl);
+    }
+
+    if (request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     try {
-      // --- الوكيل الخاص بالصور (لا تغيير هنا) ---
-      const url = new URL(request.url);
-      if (url.pathname === '/image-proxy') {
-        const imageUrl = url.searchParams.get('url');
-        if (!imageUrl) return new Response('Missing image URL', { status: 400 });
-        return await fetch(imageUrl);
-      }
-      
-      if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
       if (!env.INSTA_API_KEY) {
         return new Response(JSON.stringify({ error: 'API Key not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
@@ -36,17 +35,17 @@ export default {
         return new Response(JSON.stringify({ error: 'Instagram URL is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const baseUrl = 'https://zylalabs.com/api/2006/instagram+media+downloader+api/6285/download+all+content';
-      const finalApiUrl = `${baseUrl}?url=${encodeURIComponent(body.url)}`;
-      
-      const apiResponse = await fetch(finalApiUrl, {
+      // --- استخدام الـ API الصحيح ---
+      const rapidApiUrl = `https://instagram-saver-download-anything-on-instagram.p.rapidapi.com/post?url=${encodeURIComponent(body.url)}`;
+
+      const apiResponse = await fetch(rapidApiUrl, {
         method: 'GET',
-        headers: { 'Authorization': `Bearer ${env.INSTA_API_KEY}` },
+        headers: {
+          'X-RapidAPI-Key': env.INSTA_API_KEY, // سيتم استخدام مفتاحك هنا
+          'X-RapidAPI-Host': 'instagram-saver-download-anything-on-instagram.p.rapidapi.com'
+        }
       });
 
-      // --- الإصلاح الحاسم هنا ---
-      // نقوم بإعادة توجيه الاستجابة من ZylaLabs كما هي، سواء كانت ناجحة أم فاشلة
-      // هذا يضمن أن الواجهة الأمامية ستحصل دائمًا على JSON صحيح
       const responseBody = await apiResponse.text();
       return new Response(responseBody, {
         status: apiResponse.status,
