@@ -35,13 +35,13 @@ export default {
         return new Response(JSON.stringify({ error: 'Instagram URL is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // --- استخدام الـ API الصحيح ---
-      const rapidApiUrl = `https://instagram-saver-download-anything-on-instagram.p.rapidapi.com/post?url=${encodeURIComponent(body.url)}`;
+      // --- السطر المصحح ---
+      const rapidApiUrl = `https://instagram-saver-download-anything-on-instagram.p.rapidapi.com/api/post?url=${encodeURIComponent(body.url)}`;
 
       const apiResponse = await fetch(rapidApiUrl, {
         method: 'GET',
         headers: {
-          'X-RapidAPI-Key': env.INSTA_API_KEY, // سيتم استخدام مفتاحك هنا
+          'X-RapidAPI-Key': env.INSTA_API_KEY,
           'X-RapidAPI-Host': 'instagram-saver-download-anything-on-instagram.p.rapidapi.com'
         }
       });
