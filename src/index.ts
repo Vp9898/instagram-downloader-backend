@@ -36,7 +36,7 @@ export default {
       }
 
       // --- السطر المصحح ---
-      const rapidApiUrl = `https://instagram-saver-download-anything-on-instagram.p.rapidapi.com/api/post?url=${encodeURIComponent(body.url)}`;
+      const rapidApiUrl = `https://instagram-saver-download-anything-on-instagram.p.rapidapi.com/api/ig/post?url=${encodeURIComponent(body.url)}`;
 
       const apiResponse = await fetch(rapidApiUrl, {
         method: 'GET',
